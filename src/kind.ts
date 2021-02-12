@@ -3,6 +3,7 @@ import * as tc from '@actions/tool-cache';
 import * as exec from '@actions/exec';
 import * as io from '@actions/io';
 import * as path from 'path';
+import * as os from 'os';
 
 const VersionInput: string = "version";
 const ConfigInput: string = "config";
@@ -71,8 +72,8 @@ export function getKindConfig(): KindConfig {
 }
 
 // this action should always be run from a Linux worker
-export async function downloadKind(version: string): Promise<string> {
-    let url: string = `https://github.com/kubernetes-sigs/kind/releases/download/${version}/kind-linux-amd64`;
+export async function downloadKind(version: string, arch: string): Promise<string> {
+    let url: string = `https://github.com/kubernetes-sigs/kind/releases/download/${version}/kind-linux-${arch}`;
     console.log("downloading kind from " + url);
     let downloadPath: string | null = null;
     downloadPath = await tc.downloadTool(url);
@@ -85,9 +86,30 @@ export async function downloadKind(version: string): Promise<string> {
 
 export async function getKind(version: string): Promise<string> {
   let toolPath: string = tc.find(toolName, version);
+  let arch: string;
+
+  switch (os.arch()) {
+    case 'x64': {
+      arch = 'amd64';
+      break;
+    }
+    case 'ppc64': {
+      arch = 'ppc64le';
+      break;
+    }
+    case 'arm': {
+      arch = 'arm64';
+      break;
+    }
+    default: {
+      arch = os.arch();
+      break;
+    }
+  }
+
 
   if (toolPath === "") {
-    toolPath = await downloadKind(version);
+      toolPath = await downloadKind(version, arch);
   }
 
   return toolPath;
